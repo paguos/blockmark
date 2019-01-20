@@ -21,11 +21,11 @@ contract Workload {
     }
 
     // Send money to receiver address
-    function send(uint amount) public payable {
+    function send() public payable {
+        require(msg.value > 0);
         address payable sender = msg.sender;
-        require(amount <= sender.balance, "Insufficient balance.");
-        sender.transfer(amount);
-        //receiver.transfer(address(this).balance);
+        require(msg.value <= sender.balance, "Insufficient balance.");
+        receiver.transfer(msg.value);
         emit Sent();
     }
 }
