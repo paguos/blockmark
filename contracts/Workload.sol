@@ -1,26 +1,31 @@
-pragma solidity ^0.4.0;
+pragma solidity >=0.4.0 <0.6.0; // Tested and compiled using 0.5.2
 
 contract Workload {
-    // The keyword "public" makes those variables
-    // readable from outside.
-    address public sender;
-    mapping (address => uint) public balances;
 
-    // Events allow light clients to react on
-    // changes efficiently.
-    event Sent(address from, address to, uint amount);
-
-    // This is the constructor whose code is
-    // run only when the contract is created.
-    function Workload() {
-        sender = msg.sender;
-        balances[sender] = 1000;
+    //address payable public sender;
+    address payable public receiver;
+    
+    constructor(address payable _receiver) public payable{
+        receiver = _receiver;
+    }
+    
+    event Sent();
+    
+    // Get balance of a specified address
+    function getBalance(address _from) public view returns (uint256) {
+        return address(_from).balance;
+    }
+    
+    function getSender() public view returns (address){
+        return address(msg.sender);
     }
 
-    function send(address to, uint amount) {
-        if (balances[msg.sender] < amount) return;
-        balances[msg.sender] -= amount;
-        balances[to] += amount;
-        Sent(msg.sender, to, amount);
+    // Send money to receiver address
+    function send() public payable {
+        require(msg.value > 0);
+        address payable sender = msg.sender;
+        require(msg.value <= sender.balance, "Insufficient balance.");
+        receiver.transfer(msg.value);
+        emit Sent();
     }
 }
