@@ -1,3 +1,5 @@
+'''Simple script to set up a local ethereum network '''
+
 import threading, os, subprocess
 import atexit, signal
 import requests, time, json
@@ -7,6 +9,7 @@ eth_proceses = []
 init_balance = "0x200000000000000000000000000000000000000000000000000000000000000"
 
 def kill_nodes():
+  '''Stops the nodes subprocesses'''
   print("Stoping nodes ...")
   for pid in eth_proceses:
       os.killpg(os.getpgid(pid), signal.SIGTERM)
@@ -17,49 +20,92 @@ def delete_nodes():
   subprocess.check_output(['rm', '-r','ethereum/nodes'])
 
 class EthereumNodeThread(threading.Thread):
+  '''Handle a node subprocess '''
 
-  def __init__(self, account_address=None):
-    self.account_address = account_address 
+  def __init__(self, miner=True,account_address=None):
+    self.miner = miner
+    self.account_address = account_address
     super(EthereumNodeThread, self).__init__()
 
-  def run(self, node_numb, port, rpcport):
+  def run(self, node_name, port, rpcport):
       print("{} started!".format(self.getName()))
-      args = ['geth', '--datadir', f'ethereum/nodes/node_{node_numb}',
+      args = ['geth', '--datadir', f'ethereum/nodes/{node_name}',
             '--networkid', '8888','--nodiscover' ,'--port', f'{port}', '--rpc', '--rpcport', f'{rpcport}',
-            '--rpcapi', 'admin,personal,db,eth,net,web3,txpool, mine','--mine', '--verbosity', "0"]
+            '--rpcapi', 'admin,personal,db,eth,net,web3,txpool, mine', '--verbosity', "0"]
 
       if self.account_address != None:
         args.extend(['--unlock', self.account_address])
         args.extend(['--password', 'ethereum/password.txt'])
 
+      if self.miner:
+        args.append('--mine')
+
       p = subprocess.Popen(args)
       eth_proceses.append(p.pid)
 
-class EthereumBlockmark():
-
+class EthereumNetwork():
+  ''' Handle the ethereum network '''
   genesis_path = 'ethereum/genesis.json'
+  main_nodes = ['main', 'sender', 'receiver']
+  nodes_count = 0
 
   def __init__(self, peers, port, rpcport):
     self.peers = peers
     self.port = port
     self.rpcport = rpcport
     self.accounts = {}
+    self.setup_accounts()
+    self.setup_genesis()
+    self.init_nodes()
+    self.start_nodes()
+    self.start_miners()
+
+    time.sleep(1) # Waits for network to be ready
+
+    for enode in self.get_enodes()[1:]:
+      self.add_peer(enode)
 
   def init_nodes(self):
+    self.init_main_node()
+    self.init_sender_node()
+    self.init_receiver_node()
     for p in range(0, self.peers):
       print(f"Creating node #{p} ...")
       print(subprocess.check_output(['geth', '--datadir',
               f'ethereum/nodes/node_{p}' ,'init', 'ethereum/genesis.json']))
 
+  def init_sender_node(self):
+    print('Initializing sender node ....')
+    print(subprocess.check_output(['geth', '--datadir',
+              f'ethereum/nodes/sender' ,'init', 'ethereum/genesis.json']))
+
+  def init_receiver_node(self):
+    print('Initializing receiver node ....')
+    print(subprocess.check_output(['geth', '--datadir',
+          f'ethereum/nodes/receiver' ,'init', 'ethereum/genesis.json']))
+
+  def init_main_node(self):
+    print('Initializing main node ...')
+    print(subprocess.check_output(['geth', '--datadir',
+          f'ethereum/nodes/main' ,'init', 'ethereum/genesis.json']))
+
   def start_nodes(self):
-      print("Staring nodes ...")
-      for p in range(0, self.peers):
-        print(f"Starting node #{p} ...")
-        thread = EthereumNodeThread()
-        if p in self.accounts:
-          thread.account_address = self.accounts[p]
-        thread.run(p, self.port + p, self.rpcport + p)
-        print(f"Node #{p} started!")
+    print("Starting main nodes ...")
+    for node in self.main_nodes:
+      thread = EthereumNodeThread(miner=False)
+      thread.run(node, self.port + self.nodes_count, self.rpcport + self.nodes_count)
+      self.nodes_count = self.nodes_count + 1
+
+  def start_miners(self):
+    print("Staring miner nodes ...")
+    for p in range(0, self.peers):
+      print(f"Starting node #{p} ...")
+      thread = EthereumNodeThread()
+      if p in self.accounts:
+        thread.account_address = self.accounts[p]
+      thread.run(f"node_{p}", self.port + self.nodes_count, self.rpcport + self.nodes_count)
+      self.nodes_count = self.nodes_count + 1
+      print(f"Node #{p} started!")
 
   def get_enode_from_node(self, rpcport):
     print(f"Getting endo from node #{rpcport}")
@@ -75,7 +121,7 @@ class EthereumBlockmark():
     data = json.loads(r.text)
 
   def get_rpc_ports(self):
-    return [self.rpcport + p for p in range(0, self.peers)]
+    return [self.rpcport + c for c in range(0, self.nodes_count)]
 
   def get_enodes(self):
     return [self.get_enode_from_node(port) for port in self.get_rpc_ports()]
@@ -83,17 +129,20 @@ class EthereumBlockmark():
   def setup_accounts(self):
     print("Seting up accounts ...")
     for p in range(0, self.peers):
-      self.create_account(p)
+      self.create_account(f"node_{p}")
 
-  def create_account(self, node_numb):
-    print(f"Creating account for node #{node_numb} ...")
+    for node in self.main_nodes:
+      self.create_account(node)
+
+  def create_account(self, node_name):
+    print(f"Creating account for #{node_name} ...")
     account_address = subprocess.check_output(['geth', '--datadir',
-            f'ethereum/nodes/node_{node_numb}' ,'account', 'new', '--password', 'ethereum/password.txt']).decode('utf-8')
-    self.accounts[node_numb] = account_address[10:-2]
+            f'ethereum/nodes/{node_name}' ,'account', 'new', '--password', 'ethereum/password.txt']).decode('utf-8')
+    self.accounts[node_name] = account_address[10:-2]
 
   def setup_genesis(self):
     print("Seting up genesis file ... ")
-    founds = { self.accounts[n] : {"balance" : init_balance} for n in list(self.accounts)[:2]}
+    founds = { self.accounts["sender"] : {"balance" : init_balance}}
     self.config_genesis("alloc", founds)
 
   def read_genesis(self):
@@ -109,26 +158,7 @@ class EthereumBlockmark():
 if __name__ == "__main__":
   atexit.register(kill_nodes)
   atexit.register(delete_nodes)
-  blockmark = EthereumBlockmark(5, 34044, 7000)
-  blockmark.setup_accounts()
-  blockmark.setup_genesis()
-  blockmark.init_nodes()
-  blockmark.start_nodes()
-  time.sleep(1)
-
-  for enode in blockmark.get_enodes()[1:]:
-    blockmark.add_peer(enode)
-
-  web3 = Web3(Web3.HTTPProvider(f"http://127.0.0.1:{blockmark.rpcport}"))
-
-  print("Waiting ...")
-  time.sleep(5)
-  print("Continue ...")
-  trans_hash = web3.eth.sendTransaction({"from": web3.toChecksumAddress(f'0x{blockmark.accounts[0]}'), "to": web3.toChecksumAddress(f'0x{blockmark.accounts[3]}'), "value": web3.toWei(10000, "ether")})
-  trans_hash.hex()
-  #eth.sendTransaction({from: "0xc89c11c0a4d3a6f1bc7b2e2eca95433518c149d1", to: "0xcd0b7128fd80ba517080c3f06ef0d5bcefd1a7b4", value: web3.toWei(10000, "ether")})
-  #{0: 'd3f5acdbc96bc9b17cf429d6e3c6fa78ed69827e', 1: '1d4d2f8cbf07321950bc0331c4790022a512a5b4'}
-  print(blockmark.accounts)
+  blockmark = EthereumNetwork(2, 34044, 7000)
 
   animation = "|/-\\"
   idx = 0
