@@ -3,7 +3,6 @@
 import threading, os, subprocess
 import atexit, signal
 import requests, time, json
-from web3 import Web3
 
 eth_proceses = []
 init_balance = "0x200000000000000000000000000000000000000000000000000000000000000"
