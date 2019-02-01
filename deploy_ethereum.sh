@@ -1,1 +1,0 @@
-helm install --name blockmark stable/ethereum -f values.yaml
