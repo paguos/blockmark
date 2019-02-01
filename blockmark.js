@@ -83,7 +83,7 @@ function sleep(milliseconds) {
     }
 }
 
-async function sendFounds(web3, to, from, amount){
+async function sendEther(web3, to, from, amount){
     let transaction_hash = await web3.eth.personal.sendTransaction({
         from: to,
         to: from,
@@ -97,12 +97,12 @@ async function warmUp(web3_s, sender, web3_r, receiver){
     console.log("Start warm up ...")
     rounds = 3
     while(rounds > 0){
-        let t1 = await sendFounds(web3_s, sender, receiver, '1')
+        let t1 = await sendEther(web3_s, sender, receiver, '2')
         var receipt = null
         while(receipt == null){
             receipt = await web3_r.eth.getTransactionReceipt(t1)
         }
-        let t2 = await sendFounds(web3_r, receiver, sender, '1')
+        let t2 = await sendEther(web3_r, receiver, sender, '1')
         var receipt = null
         while(receipt == null){
             receipt = await web3_s.eth.getTransactionReceipt(t2 )
@@ -126,7 +126,7 @@ async function benchmark_ethereum(){
     while(count <= 100){
         console.log(`Starting transaction #${count}...`)
         start = Date.now()
-        let transaction_hash = await sendFounds(sender, sender_account, receiver_account, '1')
+        let transaction_hash = await sendEther(sender, sender_account, receiver_account, '1')
         console.log("Transaction send!")
         console.log("Waiting for receipt ...")
         var receipt = null
