@@ -76,8 +76,8 @@ class EthereumNetwork():
 
   def init_sender_node(self):
     print('Initializing sender node ....')
-    print(subprocess.check_output(['geth', '--datadir',
-              f'ethereum/nodes/sender' ,'init', 'ethereum/genesis.json']))
+    subprocess.check_output(['geth', '--datadir',
+              f'ethereum/nodes/sender' ,'init', 'ethereum/genesis.json'])
 
   def init_receiver_node(self):
     print('Initializing receiver node ....')
@@ -158,7 +158,7 @@ class EthereumNetwork():
 if __name__ == "__main__":
   atexit.register(kill_nodes)
   atexit.register(delete_nodes)
-  blockmark = EthereumNetwork(2, 34044, 7000)
+  blockmark = EthereumNetwork(2, 30310, 8545)
 
   animation = "|/-\\"
   idx = 0
