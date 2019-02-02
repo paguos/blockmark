@@ -9,7 +9,7 @@ This repository is based on [Fabric Samples](https://github.com/hyperledger/fabr
 
 ### Configuring Fabric Explorer 
 
-![Fabric Explorer](//i.imgur.com/VIChXCr.png)
+![Fabric Explorer](https://i.imgur.com/VIChXCr.png)
 
 To setup blockchain explorer modify the `config.json` with using `fabric-explorer.config.template.json` as a baseline. 
 
