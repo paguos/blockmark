@@ -27,16 +27,16 @@ const csvWriter = createCsvWriter({
 
 let csv_data = [], tx_submission_time = null;
 
-let basePath = "/home/ayazali/Documents/informatik_ms_cs/semester_1/EnterpriseComputing/projekt/blockmark/hyperledger-blockmark-network/fabric-samples/first-network/crypto-config/peerOrganizations/org1.example.com/users/User1@org1.example.com/";
+let basePath = "../first-network/crypto-config/peerOrganizations/org1.example.com/users/User1@org1.example.com/";
 let serverCert = fs.readFileSync(basePath + 'msp/tlscacerts/tlsca.org1.example.com-cert.pem');
 let clientKey = fs.readFileSync(basePath + 'tls/client.key');
 let clientCert = fs.readFileSync(basePath + 'tls/client.crt');
 
-let ordererCert = fs.readFileSync("/home/ayazali/Documents/informatik_ms_cs/semester_1/EnterpriseComputing/projekt/blockmark/hyperledger-blockmark-network/fabric-samples/first-network/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem");
-let peer1Org1Cert = fs.readFileSync("/home/ayazali/Documents/informatik_ms_cs/semester_1/EnterpriseComputing/projekt/blockmark/hyperledger-blockmark-network/fabric-samples/first-network/crypto-config/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/tlscacerts/tlsca.org1.example.com-cert.pem");
-let peer0Org2Cert = fs.readFileSync("/home/ayazali/Documents/informatik_ms_cs/semester_1/EnterpriseComputing/projekt/blockmark/hyperledger-blockmark-network/fabric-samples/first-network/crypto-config/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/tlscacerts/tlsca.org2.example.com-cert.pem");
+let ordererCert = fs.readFileSync("../first-network/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem");
+let peer1Org1Cert = fs.readFileSync("../first-network/crypto-config/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/tlscacerts/tlsca.org1.example.com-cert.pem");
+let peer0Org2Cert = fs.readFileSync("../first-network/crypto-config/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/tlscacerts/tlsca.org2.example.com-cert.pem");
 
-
+let tx_timeout = 10000;
 //
 var fabric_client = new Fabric_Client();
 
@@ -185,7 +185,7 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
 				event_hub_peer0_org1.unregisterTxEvent(transaction_id_string);
 				event_hub_peer0_org1.disconnect();
 				resolve({event_status : 'TIMEOUT'}); //we could use reject(new Error('Trnasaction did not complete within 30 seconds'));
-			}, 3000);
+			}, tx_timeout);
 			event_hub_peer0_org1.registerTxEvent(transaction_id_string, (tx, code) => {
 				// this is the callback for transaction event status
 				// first some clean up of event listener
@@ -221,7 +221,7 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
 				event_hub_peer1_org1.unregisterTxEvent(transaction_id_string);
 				event_hub_peer1_org1.disconnect();
 				resolve({event_status : 'TIMEOUT'}); //we could use reject(new Error('Trnasaction did not complete within 30 seconds'));
-			}, 3000);
+			}, tx_timeout);
 			event_hub_peer1_org1.registerTxEvent(transaction_id_string, (tx, code) => {
 				// this is the callback for transaction event status
 				// first some clean up of event listener
@@ -257,7 +257,7 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
 				event_hub_peer0_org2.unregisterTxEvent(transaction_id_string);
 				event_hub_peer0_org2.disconnect();
 				resolve({event_status : 'TIMEOUT'}); //we could use reject(new Error('Trnasaction did not complete within 30 seconds'));
-			}, 3000);
+			}, tx_timeout);
 			event_hub_peer0_org2.registerTxEvent(transaction_id_string, (tx, code) => {
 				// this is the callback for transaction event status
 				// first some clean up of event listener
@@ -293,7 +293,7 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
 				event_hub_peer1_org2.unregisterTxEvent(transaction_id_string);
 				event_hub_peer1_org2.disconnect();
 				resolve({event_status : 'TIMEOUT'}); //we could use reject(new Error('Trnasaction did not complete within 30 seconds'));
-			}, 3000);
+			}, tx_timeout);
 			event_hub_peer1_org2.registerTxEvent(transaction_id_string, (tx, code) => {
 				// this is the callback for transaction event status
 				// first some clean up of event listener
@@ -347,7 +347,7 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
 	if(results && results[1] && results[1].event_status === 'VALID') {
 		console.log('Successfully committed the change to the ledger by the peer');
 		csvWriter.writeRecords(csv_data).then(() => console.log('The CSV file was written successfully'));
-	} else {
+	} else {		
 		console.log('Transaction failed to be committed to the ledger due to ::'+results[1].event_status);
 	}
 }).catch((err) => {
